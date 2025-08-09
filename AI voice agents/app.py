@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+import uvicorn
 import requests
 import os
 from dotenv import load_dotenv
@@ -22,8 +23,10 @@ MURF_API_URL = os.getenv("MURF_API_URL","https://api.murf.ai/v1/speech/generate"
 ASS_API_KEY = os.getenv("ASSEMBLY_API_KEY")
 G_API_KEY = os.getenv("G_API_KEY")
 
-client = genai.Client(api_key = G_API_KEY)
-aai.settings.api_key = ASS_API_KEY
+if G_API_KEY:
+    client = genai.Client(api_key = G_API_KEY)
+if ASS_API_KEY:
+    aai.settings.api_key = ASS_API_KEY
 
 # Setting & Configure Logging
 logging.basicConfig(level=logging.INFO)
@@ -372,8 +375,12 @@ async def llmquery(data : LLMrequest):
             detail = f"Internal server error: {str(e)}"
         )
 if __name__ == "__main__":
-    import uvicorn
     print("🚀 Starting FastAPI server...")
     print("📍 Visit: http://127.0.0.1:8000")
     print("📖 API Docs: http://127.0.0.1:8000/docs")
+
+    # Print API key status for debugging
+    print(f"🔑 MURF_API_KEY configured: {'Yes' if MURF_API_KEY else 'No'}")
+    print(f"🔑 AAI_API_KEY configured: {'Yes' if ASS_API_KEY else 'No'}")
+    print(f"🔑 G_API_KEY configured: {'Yes' if G_API_KEY else 'No'}")
     uvicorn.run(app, host="127.0.0.1", port=8000, reload=False)
