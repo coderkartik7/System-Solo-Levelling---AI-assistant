@@ -9,7 +9,8 @@
 
 <!-- Text to speech -->
 <body>
-    <div class="container">
+    <div class="main-container">
+        <div class="container">
         <h1>🎤 AI Voice Generator</h1>
         <p class="subtitle">Transform your text into natural-sounding speech</p>
         
@@ -41,10 +42,6 @@
                 🎵 Generate Speech
             </button>
         </form>
-        
-        <div class="result-area" id="resultArea">
-            <p>Enter your text above and click "Generate Speech" to create your audio!</p>
-        </div>
     </div>
 
 
@@ -60,24 +57,41 @@
         </div>
 
         <div id="status" class="status ready"> Ready to Record </div>
-
-        <div class="wave-animation" id="waveAnimation">
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-            <div class="wave-bar"></div>
-        </div>
-
         <div class="audio-container">
             <audio id="audioPlayback" controls style="display: none;"></audio>
         </div>
+    </div>
+    </div>
+    
 
-        <div class="recording-info">
-            <p>Click "Start Recording" to begin capturing audio from your microphone.</p>
-            <p>Your AI generated voice will appear below for playback once you stop recording.</p>
+<!-- LLM Chat Bot -->
+    <div class="container">
+        <h1>🤖 AI Chat Bot</h1>
+        <p class="subtitle">Ask me anything! I'll listen and respond with my voice</p>
+
+        <div class="controls">
+            <button id="llmStartBtn" class="start-btn">🎙️ Start Recording</button>
+            <button id="llmStopBtn" class="stop-btn">⏹️ Stop Recording</button> 
         </div>
 
+        <div class="input-group" style="margin: 20px 0;">
+            <label for="llmVoiceSelect">Choose AI voice:</label>
+            <select id="llmVoiceSelect">
+                <option value="en-US-Daniel">Daniel (US Male)</option>
+                <option value="en-US-davis">Davis (US Male)</option>
+                <option value="en-GB-ruby">Ruby (UK Female)</option>
+                <option value="en-AU-olivia">Olivia (AU Female)</option>
+            </select>
+        </div>
+
+        <div id="llmStatus" class="status ready">Ready to chat - Click "Start Recording" to ask me anything!</div>
+        <div class="chat-container" id="chatContainer">
+            <!-- Chat messages will appear here -->
+        </div>
+
+        <div class="audio-container">
+            <audio id="llmAudioPlayback" controls style="display: none;"></audio>
+        </div>
     </div>
     <script src="static/script.js"></script>
 </body>
