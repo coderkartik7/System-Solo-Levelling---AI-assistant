@@ -45,6 +45,9 @@ static_path = current_dir / "static"
 templates_path = current_dir / "templates"
 uploads_path = current_dir/"uploads"
 
+# Create uploads directory if it doesn't exist
+uploads_path.mkdir(exist_ok=True)
+
 #Mounting Static files
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
@@ -76,9 +79,15 @@ class EchoResponse(BaseModel):
     audio_url: Optional[str] = None
     message: Optional[str] = None
     error: Optional[str] = None
-class LLMrequest(BaseModel):
-    text : str = "Explain how AI works in a few words"
-    model : str = "gemini-2.5-flash"
+
+class LLMResponse(BaseModel):
+    success: bool
+    transcribed_text: Optional[str] = None
+    llm_response: Optional[str] = None
+    audio_url: Optional[str] = None
+    message: Optional[str] = None
+    error: Optional[str] = None
+
 #Serving the HTML file
 @app.get("/",response_class=HTMLResponse)
 async def homepage():
@@ -97,14 +106,12 @@ async def get_data():
     return {
         "message": "Hello from FastAPI backend!",
         "status": "success",
-        "day": "Day 2 - TTS Integration",
         "framework": "FastAPI"
     }
 
 # Convert text to speech in Murf Voice    
 @app.post("/api/tts", response_model=TTSResponse)
 async def tts(request: TTSRequest):
-
     # Checking API Key:
     if not MURF_API_KEY:
         logger.info("API_KEY not found in env file")
@@ -152,7 +159,6 @@ async def tts(request: TTSRequest):
         )
 
         #Handling API Response from Murf:
-
         if response.status_code == 200:
             response_data = response.json()
             audio = response_data.get("audioFile")
@@ -331,48 +337,170 @@ async def echo_tts(audio_file: UploadFile = File(...), voiceid: str = "en-US-dan
             detail=f"Internal server error: {str(e)}"
         )
 
-# Gemini API end point:-
-@app.post("/llm/query")
-async def llmquery(data : LLMrequest):
+# Updated Gemini API endpoint for full LLM pipeline
+@app.post("/llm/query", response_model=LLMResponse)
+async def llm_query(audio_file: UploadFile = File(...), model: str = "gemini-2.0-flash-exp", voiceid: str = "en-US-daniel"):
+    # Check all required API keys
     if not G_API_KEY:
         logger.error("NO LLM KEY FOUND!")
         raise HTTPException(
+            status_code=500,
+            detail="LLM API KEY NOT FOUND"
+        )
+    
+    if not ASS_API_KEY:
+        logger.error("Assembly AI API key not found!")
+        raise HTTPException(
+            status_code=500,
+            detail="Transcription service not configured"
+        )
+    
+    if not MURF_API_KEY:
+        logger.error("Murf API key not found!")
+        raise HTTPException(
+            status_code=500,
+            detail="TTS service not configured"
+        )
+
+    if not audio_file:
+        raise HTTPException(
             status_code=400,
-            detail="NO API KEY IS NOT FOUND"
-        )
-    if not data.text:
-        raise HTTPException(
-            status_code=500,
-            detail="Please Enter text"
+            detail="Please provide audio file"
         )
     
-    logger.info(f"Calling Gemini API with model: {data.model}")
-    logger.info(f"Query text: {data.text[:100]}...")
-    
+    # Save the uploaded audio file
+    filename = f"llm_{int(time.time())}_{audio_file.filename}"
+    filepath = uploads_path / filename
+
     try:
-        g_response = client.models.generate_content(
-            model = data.model,
-            contents = data.text
-            # Check Gemini docs to disable thinking
-        )
-        if g_response.candidates:
-            logger.info("Success: The API returned a valid response with generated content.")
-        else:
-            logger.info("Failure: The API did not return any valid responses.")
-            return
-        if not g_response.text:
-            logger.info("No response received from LLM")
+        # Save audio file
+        logger.info("Saving audio file for LLM processing...")
+        with open(filepath, "wb") as buffer:
+            content = await audio_file.read()
+            buffer.write(content)
+        
+        # Step 1: Transcribe the audio
+        logger.info("Step 1: Transcribing audio...")
+        transcript = aai.Transcriber().transcribe(str(filepath))
+        
+        if transcript.status == "error":
+            logger.error(f"Transcription failed: {transcript.error}")
             raise HTTPException(
-                status_code=401,
-                detail="No response received!"
+                status_code=400,
+                detail=f"Transcription failed: {transcript.error}"
             )
+        
+        transcribed_text = transcript.text or ""
+        
+        if not transcribed_text or transcribed_text.strip() == "":
+            raise HTTPException(
+                status_code=400,
+                detail="No speech detected in the audio"
+            )
+        
+        text_preview = transcribed_text[:50] if len(transcribed_text) > 50 else transcribed_text
+        logger.info(f"Transcription successful: {text_preview}...")
+        
+        # Step 2: Get LLM response
+        logger.info(f"Step 2: Calling Gemini API with model: {model}")
+        logger.info(f"Query text: {transcribed_text[:100]}...")
+        
+        g_response = client.models.generate_content(
+            model=model,
+            contents=transcribed_text
+        )
+        
+        if not g_response.candidates:
+            logger.error("Failure: The API did not return any valid responses.")
+            raise HTTPException(
+                status_code=500,
+                detail="No response received from LLM"
+            )
+        
+        if not g_response.text:
+            logger.error("No response text received from LLM")
+            raise HTTPException(
+                status_code=500,
+                detail="No response text received from LLM"
+            )
+        
+        response_preview = g_response.text[:100] if len(g_response.text) > 100 else g_response.text
+        logger.info(f"LLM response successful: {response_preview}...")
+        
+        # Step 3: Convert LLM response to speech using Murf
+        logger.info("Step 3: Converting LLM response to speech...")
+        
+        headers = {
+            "api-key": MURF_API_KEY,
+            "Content-type": "application/json"
+        }
+        
+        payload = {
+            "text": g_response.text,
+            "voiceId": voiceid,
+            "style": "Conversational",
+            "format": "MP3",
+            "sampleRate": "8000.0"
+        }
+
+        # Call Murf API
+        murf_response = requests.post(
+            MURF_API_URL,
+            json=payload,
+            headers=headers,
+            timeout=60  # Longer timeout for potentially longer responses
+        )
+
+        if murf_response.status_code == 200:
+            murf_data = murf_response.json()
+            audio_url = murf_data.get("audioFile")
+            
+            if audio_url:
+                logger.info("Complete LLM pipeline successful!")
+                
+                # Clean up the temporary file
+                try:
+                    filepath.unlink()
+                except:
+                    pass  # Ignore cleanup errors
+                
+                return LLMResponse(
+                    success=True,
+                    transcribed_text=transcribed_text,
+                    llm_response=g_response.text,
+                    audio_url=audio_url,
+                    message="LLM pipeline completed successfully!"
+                )
+            else:
+                logger.error("No audio URL in Murf response")
+                raise HTTPException(
+                    status_code=500,
+                    detail="TTS service returned invalid response"
+                )
         else:
-            return(g_response.text)
-    except Exception as e:
-        logger.info(f"LLM query error : {str(e)}")
+            logger.error(f"Murf API error: {murf_response.status_code} - {murf_response.text}")
+            raise HTTPException(
+                status_code=murf_response.status_code,
+                detail=f"TTS service error: {murf_response.status_code}"
+            )
+
+    except requests.exceptions.Timeout:
+        logger.error("Request timed out during LLM pipeline")
         raise HTTPException(
             status_code=500,
-            detail = f"Internal server error: {str(e)}"
+            detail="Request timed out. Please try again."
+        )
+    except requests.exceptions.ConnectionError:
+        logger.error("Connection error during LLM pipeline")
+        raise HTTPException(
+            status_code=503,
+            detail="Service unavailable. Please try again later."
+        )
+    except Exception as e:
+        logger.error(f"LLM pipeline error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
         )
 if __name__ == "__main__":
     print("🚀 Starting FastAPI server...")
