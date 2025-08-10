@@ -99,6 +99,17 @@ Each day focuses on building a fully functional AI-powered voice application, st
 
 ---
 
+### **Day 9: The Full Non-Streaming Pipeline**
+- Updated `/llm/query` endpoint.
+- Accept audio as input.
+- Audio is transcribed through **AssemblyAI**
+- Transciption sent to **Google Gemini API**
+- **Gemini API** text response is converted into Murf Voice using **Murf API**
+
+**Skils Learned:**
+✅ Combining LLM API with other for multi-step workflows  
+✅ Real-time audio response from LLM
+
 ## 🛠️ Tech Stack
 - **Backend:** FastAPI (Python)
 - **Frontend:** HTML, CSS, JavaScript
