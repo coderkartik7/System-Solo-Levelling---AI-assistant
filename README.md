@@ -110,6 +110,18 @@ Each day focuses on building a fully functional AI-powered voice application, st
 ✅ Combining LLM API with other for multi-step workflows  
 ✅ Real-time audio response from LLM
 
+### **Day 10: Chat History for Conversational Bot**
+- Created a POST `/agent/chat/{session_id}` endpoint.
+- Used an in-memory dictionary datastore to store chat history per session_id.
+- Chat history for that session_id is fetched and combined with the new message and sent to LLM
+- LLM response is stored back into chat history and audio response is given to user.
+-Automatically starts recording after an LLM audio response
+
+**Skills Learned:**
+✅ Session-based conversation memory
+✅ Combining STT → LLM → TTS in one flow
+✅ Auto-triggering recording in the frontend
+
 ## 🛠️ Tech Stack
 - **Backend:** FastAPI (Python)
 - **Frontend:** HTML, CSS, JavaScript
