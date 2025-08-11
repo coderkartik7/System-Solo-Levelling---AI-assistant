@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Voice Generator</title>
+    <title>AI Voice Generator with Chat History</title>
     <link rel="stylesheet" href="static/styles.css">
 </head>
 
@@ -28,25 +28,16 @@
                 </div>
             </div>
             
-            <div class="input-group">
-                <label for="voiceSelect">Choose a voice:</label>
-                <select id="voiceSelect">
-                    <option value="en-US-Daniel">Daniel (US Male)</option>
-                    <option value="en-US-davis">Davis (US Male)</option>
-                    <option value="en-GB-ruby">Ruby (UK Female)</option>
-                    <option value="en-AU-olivia">Olivia (AU Female)</option>
-                </select>
-            </div>
-            
             <button type="submit" class="generate-btn" id="generateBtn">
                 🎵 Generate Speech
             </button>
         </form>
+
+        <div id="resultArea" class="result-area" style="display: none;"></div>
     </div>
 
 
 <!-- Echo Bot -->
-
     <div class="container">
         <h1> Echo Bot v2</h1>
         <p class="subtitle"> Say something and I will repeat it</p>
@@ -61,30 +52,42 @@
             <audio id="audioPlayback" controls style="display: none;"></audio>
         </div>
     </div>
-    </div>
     
 
-<!-- LLM Chat Bot -->
+<!-- Enhanced AI Chat Bot with Session Management -->
     <div class="container">
-        <h1>🤖 AI Chat Bot</h1>
-        <p class="subtitle">Ask me anything! I'll listen and respond with my voice</p>
+        <h1>🤖 AI Conversational Agent</h1>
+        <p class="subtitle">Have a continuous conversation with AI - I remember our chat history!</p>
+
+        <div class="session-info">
+            <div class="session-display">
+                <span class="session-label">Session ID:</span>
+                <span id="currentSessionId" class="session-id">Loading...</span>
+                <button id="newSessionBtn" class="new-session-btn">🆕 New Session</button>
+            </div>
+        </div>
 
         <div class="controls">
             <button id="llmStartBtn" class="start-btn">🎙️ Start Recording</button>
             <button id="llmStopBtn" class="stop-btn">⏹️ Stop Recording</button> 
         </div>
 
-        <div class="input-group" style="margin: 20px 0;">
-            <label for="llmVoiceSelect">Choose AI voice:</label>
-            <select id="llmVoiceSelect">
-                <option value="en-US-Daniel">Daniel (US Male)</option>
-                <option value="en-US-davis">Davis (US Male)</option>
-                <option value="en-GB-ruby">Ruby (UK Female)</option>
-                <option value="en-AU-olivia">Olivia (AU Female)</option>
-            </select>
+        <div class="chat-options">
+            <div class="checkbox-container">
+                <input type="checkbox" id="disableThinking" />
+                <label for="disableThinking">⚡ Fast Response (Disable AI thinking)</label>
+            </div>
         </div>
 
-        <div id="llmStatus" class="status ready">Ready to chat - Click "Start Recording" to ask me anything!</div>
+        <div class="status-container">
+            <div class="thinking-dots" id="thinkingDots" style="display: none;">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div id="llmStatus" class="status ready">Ready to chat - Click "Start Recording" to ask me anything!</div>
+        </div>
+
         <div class="chat-container" id="chatContainer">
             <!-- Chat messages will appear here -->
         </div>
@@ -92,7 +95,12 @@
         <div class="audio-container">
             <audio id="llmAudioPlayback" controls style="display: none;"></audio>
         </div>
+
+        <div class="chat-controls">
+            <button id="clearChatBtn" class="clear-chat-btn">🗑️ Clear Chat History</button>
+        </div>
     </div>
+    
     <script src="static/script.js"></script>
 </body>
 </html>
