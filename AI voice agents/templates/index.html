@@ -7,53 +7,6 @@
     <link rel="stylesheet" href="static/styles.css">
 </head>
 
-<!-- Text to speech -->
-<body>
-    <div class="main-container">
-        <div class="container">
-        <h1>🎤 AI Voice Generator</h1>
-        <p class="subtitle">Transform your text into natural-sounding speech</p>
-        
-        <form id="ttsForm">
-            <div class="input-group">
-                <label for="textInput">Enter your text:</label>
-                <textarea 
-                    id="textInput" 
-                    placeholder="Type or paste your text here... (up to 5000 characters)"
-                    maxlength="5000"
-                    required
-                ></textarea>
-                <div class="char-counter">
-                    <span id="charCount">0</span>/5000 characters
-                </div>
-            </div>
-            
-            <button type="submit" class="generate-btn" id="generateBtn">
-                🎵 Generate Speech
-            </button>
-        </form>
-
-        <div id="resultArea" class="result-area" style="display: none;"></div>
-    </div>
-
-
-<!-- Echo Bot -->
-    <div class="container">
-        <h1> Echo Bot v2</h1>
-        <p class="subtitle"> Say something and I will repeat it</p>
-
-        <div class="controls">
-            <button id="startBtn" class="start-btn"> Start Recording </button>
-            <button id="stopBtn" class="stop-btn"> Stop Recording </button> 
-        </div>
-
-        <div id="status" class="status ready"> Ready to Record </div>
-        <div class="audio-container">
-            <audio id="audioPlayback" controls style="display: none;"></audio>
-        </div>
-    </div>
-    
-
 <!-- Enhanced AI Chat Bot with Session Management -->
     <div class="container">
         <h1>🤖 AI Conversational Agent</h1>
