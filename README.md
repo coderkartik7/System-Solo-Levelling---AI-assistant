@@ -110,6 +110,8 @@ Each day focuses on building a fully functional AI-powered voice application, st
 ✅ Combining LLM API with other for multi-step workflows  
 ✅ Real-time audio response from LLM
 
+---
+
 ### **Day 10: Chat History for Conversational Bot**
 - Created a POST `/agent/chat/{session_id}` endpoint.
 - Used an in-memory dictionary datastore to store chat history per session_id.
@@ -122,6 +124,8 @@ Each day focuses on building a fully functional AI-powered voice application, st
 ✅ Combining STT → LLM → TTS in one flow
 ✅ Auto-triggering recording in the frontend
 
+---
+
 ### **Day 11: Building Resilient AI Voice Applications: Mastering Error Handling 🚨**
 🔥 Scenarios I tackled:
 - API & Service Failures
@@ -131,6 +135,8 @@ Each day focuses on building a fully functional AI-powered voice application, st
 
 **Skills Learned:**
 ✅ More efficient error handling
+
+---
 
 ### **Day 12: Enhanced UI and also removed echo bot & AI voice generator
 - ➕ “New Session” button 
@@ -144,8 +150,12 @@ Each day focuses on building a fully functional AI-powered voice application, st
 ✅ Building more convenient UI
 ✅ Making UI like Modern LLMs
 
+---
+
 ### **Day 13: Create a Readme file if not created yet**
 - Already Done!
+
+---
 
 ## 🛠️ Tech Stack
 - **Backend:** FastAPI (Python)
