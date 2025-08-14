@@ -122,6 +122,31 @@ Each day focuses on building a fully functional AI-powered voice application, st
 ✅ Combining STT → LLM → TTS in one flow
 ✅ Auto-triggering recording in the frontend
 
+### **Day 11: Building Resilient AI Voice Applications: Mastering Error Handling 🚨**
+🔥 Scenarios I tackled:
+- API & Service Failures
+- Audio Processing Issues
+- Network & Connectivity Problems
+- Session Stability
+
+**Skills Learned:**
+✅ More efficient error handling
+
+### **Day 12: Enhanced UI and also removed echo bot & AI voice generator
+- ➕ “New Session” button 
+- Changed the old looking UI to modern LLM UI's like Gemini, ChatGPT,etc 
+- Single toggle start/stop recording button
+- ❌ Stop Conversation button at bottom right — stops auto-mic loop after agent responses
+- Transcribed conversation text displayed above buttons, along with LLM status updates
+- Removed initial TTS & Echo Bot sections for a cleaner layout
+
+**Skills Learned:**
+✅ Building more convenient UI
+✅ Making UI like Modern LLMs
+
+### **Day 13: Create a Readme file if not created yet**
+- Already Done!
+
 ## 🛠️ Tech Stack
 - **Backend:** FastAPI (Python)
 - **Frontend:** HTML, CSS, JavaScript
