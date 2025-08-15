@@ -3,6 +3,34 @@
 This repository documents my progress in the **#30DaysofVoiceAgents** challenge by **Murf AI**.  
 Each day focuses on building a fully functional AI-powered voice application, step-by-step, using **FastAPI**, **JavaScript**, **HTML**, **Murf API**, **AssemblyAI**, and **Google Gemini API**.
 
+
+## Project Structure
+```
+AI voice agents/
+├── app/
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── schemas.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── llm_service.py
+│   │   ├── stt_service.py
+│   │   └── tts_service.py
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── session_manager.py
+│   │   └── config.py
+│   └── main.py
+├── static/
+├── templates/
+├── uploads/
+├── .env
+├── .gitignore
+├── app.log
+├── README.md
+├── requirements.txt
+```
+
 ---
 
 ## 📅 Daily Progress
@@ -156,6 +184,22 @@ Each day focuses on building a fully functional AI-powered voice application, st
 - Already Done!
 
 ---
+
+### **Day 14: Code Refactoring & Project Cleanup 🛠️**
+- Separated **schemas** (Pydantic models) for request/response objects into `/models` for cleaner endpoint definitions.
+- Moved **STT**, **TTS**, and **LLM** integrations into dedicated files under `/services`.
+- Added `session_manager.py` in `/utils` for managing chat sessions and history.
+- Added `config.py` in `/main` for centralized configuration and environment variable management.
+- Created `__init__.py` in every folder for proper Python package structure.
+- Removed unused imports, variables, and functions.
+- Improved code readability with clear function names and docstrings.
+- Updated README with latest project structure.
+
+**Skills Learned:**
+✅ Code refactoring best practices  
+✅ Organizing a FastAPI project for maintainability  
+✅ Using Python’s `logging` module effectively  
+✅ Writing cleaner, more modular code
 
 ## 🛠️ Tech Stack
 - **Backend:** FastAPI (Python)
