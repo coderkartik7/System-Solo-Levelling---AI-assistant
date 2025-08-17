@@ -4,11 +4,13 @@ import logging
 import time
 import uuid
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Optional
 from contextlib import asynccontextmanager
-
+import json
+import asyncio
+from datetime import datetime
 import uvicorn
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -29,6 +31,90 @@ config.setup_directories()
 config.setup_logging()
 
 logger = logging.getLogger(__name__)
+
+class ConnectionManager:
+    """WebSocket connection manager for handling multiple clients."""
+    
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+        self.client_info: Dict[WebSocket, dict] = {}
+    
+    async def connect(self, websocket: WebSocket, client_id: Optional[str] = None):
+        """Accept and store a WebSocket connection."""
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        
+        # Store client information
+        self.client_info[websocket] = {
+            "client_id": client_id or f"client_{len(self.active_connections)}",
+            "connected_at": datetime.now().isoformat(),
+            "message_count": 0
+        }
+        
+        logger.info(f"WebSocket client connected: {self.client_info[websocket]['client_id']}")
+    
+    def disconnect(self, websocket: WebSocket):
+        """Remove a WebSocket connection."""
+        if websocket in self.active_connections:
+            client_info = self.client_info.get(websocket, {})
+            client_id = client_info.get("client_id", "unknown")
+            
+            self.active_connections.remove(websocket)
+            if websocket in self.client_info:
+                del self.client_info[websocket]
+            
+            logger.info(f"WebSocket client disconnected: {client_id}")
+    
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        """Send a message to a specific client."""
+        try:
+            await websocket.send_text(message)
+            
+            # Update message count
+            if websocket in self.client_info:
+                self.client_info[websocket]["message_count"] += 1
+                
+        except Exception as e:
+            logger.error(f"Error sending message to client: {e}")
+            self.disconnect(websocket)
+    
+    async def broadcast(self, message: str, exclude_websocket: Optional[WebSocket] = None):
+        """Broadcast a message to all connected clients."""
+        disconnected_clients = []
+        
+        for connection in self.active_connections:
+            if connection != exclude_websocket:
+                try:
+                    await connection.send_text(message)
+                    
+                    # Update message count
+                    if connection in self.client_info:
+                        self.client_info[connection]["message_count"] += 1
+                        
+                except Exception as e:
+                    logger.error(f"Error broadcasting to client: {e}")
+                    disconnected_clients.append(connection)
+        
+        # Clean up disconnected clients
+        for client in disconnected_clients:
+            self.disconnect(client)
+    
+    def get_connection_stats(self) -> dict:
+        """Get statistics about current connections."""
+        return {
+            "total_connections": len(self.active_connections),
+            "clients": [
+                {
+                    "client_id": info["client_id"],
+                    "connected_at": info["connected_at"],
+                    "message_count": info["message_count"]
+                }
+                for info in self.client_info.values()
+            ]
+        }
+
+# Initialize the connection manager (add this after your other global instances)
+websocket_manager = ConnectionManager()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -364,6 +450,236 @@ async def get_data():
         "status": "success",
         "framework": "FastAPI",
         "version": "2.0.0"
+    }
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    Basic WebSocket endpoint for real-time communication.
+    
+    This endpoint accepts WebSocket connections and handles:
+    - Echo messages back to the sender
+    - Broadcast messages to all connected clients
+    - Connection management
+    """
+    await websocket_manager.connect(websocket)
+    
+    try:
+        while True:
+            # Receive message from client
+            data = await websocket.receive_text()
+            
+            try:
+                # Try to parse as JSON for structured messages
+                message_data = json.loads(data)
+                
+                # Handle different message types
+                message_type = message_data.get("type", "echo")
+                message_content = message_data.get("message", "")
+                client_id = message_data.get("client_id", "anonymous")
+                
+                logger.info(f"Received WebSocket message: {message_type} from {client_id}")
+                
+                if message_type == "echo":
+                    # Echo the message back to sender
+                    response = {
+                        "type": "echo_response",
+                        "original_message": message_content,
+                        "timestamp": datetime.now().isoformat(),
+                        "message": f"Echo: {message_content}"
+                    }
+                    await websocket_manager.send_personal_message(
+                        json.dumps(response), websocket
+                    )
+                
+                elif message_type == "broadcast":
+                    # Broadcast message to all clients
+                    broadcast_message = {
+                        "type": "broadcast_message",
+                        "from_client": client_id,
+                        "message": message_content,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    await websocket_manager.broadcast(
+                        json.dumps(broadcast_message), exclude_websocket=websocket
+                    )
+                    
+                    # Send confirmation to sender
+                    confirmation = {
+                        "type": "broadcast_confirmation",
+                        "message": f"Broadcasted to {len(websocket_manager.active_connections) - 1} clients",
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    await websocket_manager.send_personal_message(
+                        json.dumps(confirmation), websocket
+                    )
+                
+                elif message_type == "ping":
+                    # Respond to ping with pong
+                    pong_response = {
+                        "type": "pong",
+                        "timestamp": datetime.now().isoformat(),
+                        "message": "pong"
+                    }
+                    await websocket_manager.send_personal_message(
+                        json.dumps(pong_response), websocket
+                    )
+                
+                elif message_type == "stats":
+                    # Send connection statistics
+                    stats = websocket_manager.get_connection_stats()
+                    stats_response = {
+                        "type": "stats_response",
+                        "timestamp": datetime.now().isoformat(),
+                        "stats": stats
+                    }
+                    await websocket_manager.send_personal_message(
+                        json.dumps(stats_response), websocket
+                    )
+                
+                else:
+                    # Unknown message type - send error
+                    error_response = {
+                        "type": "error",
+                        "message": f"Unknown message type: {message_type}",
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    await websocket_manager.send_personal_message(
+                        json.dumps(error_response), websocket
+                    )
+                    
+            except json.JSONDecodeError:
+                # Handle plain text messages
+                logger.info(f"Received plain text WebSocket message: {data}")
+                
+                # Simple echo for plain text
+                response_message = f"Echo: {data} (received at {datetime.now().isoformat()})"
+                await websocket_manager.send_personal_message(response_message, websocket)
+                
+    except WebSocketDisconnect:
+        websocket_manager.disconnect(websocket)
+        logger.info("WebSocket client disconnected")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        websocket_manager.disconnect(websocket)
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint_with_id(websocket: WebSocket, client_id: str):
+    """
+    WebSocket endpoint with client ID parameter.
+    
+    This allows clients to identify themselves with a custom ID.
+    """
+    await websocket_manager.connect(websocket, client_id)
+    
+    # Send welcome message
+    welcome_message = {
+        "type": "welcome",
+        "client_id": client_id,
+        "message": f"Welcome {client_id}! You are now connected to the WebSocket server.",
+        "timestamp": datetime.now().isoformat(),
+        "connected_clients": len(websocket_manager.active_connections)
+    }
+    await websocket_manager.send_personal_message(json.dumps(welcome_message), websocket)
+    
+    try:
+        while True:
+            data = await websocket.receive_text()
+            
+            try:
+                message_data = json.loads(data)
+                message_type = message_data.get("type", "echo")
+                message_content = message_data.get("message", "")
+                
+                logger.info(f"Received message from {client_id}: {message_type}")
+                
+                # Add client_id to the message data
+                message_data["from_client_id"] = client_id
+                message_data["timestamp"] = datetime.now().isoformat()
+                
+                if message_type == "echo":
+                    response = {
+                        "type": "echo_response",
+                        "to_client": client_id,
+                        "original_message": message_content,
+                        "message": f"Echo for {client_id}: {message_content}",
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    await websocket_manager.send_personal_message(json.dumps(response), websocket)
+                
+                elif message_type == "broadcast":
+                    # Broadcast with client ID
+                    broadcast_message = {
+                        "type": "broadcast_message",
+                        "from_client": client_id,
+                        "message": message_content,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    await websocket_manager.broadcast(json.dumps(broadcast_message), exclude_websocket=websocket)
+                    
+                    # Confirmation
+                    confirmation = {
+                        "type": "broadcast_confirmation",
+                        "client_id": client_id,
+                        "message": f"Message broadcasted to {len(websocket_manager.active_connections) - 1} other clients",
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    await websocket_manager.send_personal_message(json.dumps(confirmation), websocket)
+                
+                else:
+                    # Echo back with client ID
+                    response = {
+                        "type": "response",
+                        "client_id": client_id,
+                        "original_type": message_type,
+                        "message": f"Received {message_type} from {client_id}: {message_content}",
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    await websocket_manager.send_personal_message(json.dumps(response), websocket)
+                    
+            except json.JSONDecodeError:
+                # Handle plain text
+                response_message = f"[{client_id}] Echo: {data} (at {datetime.now().isoformat()})"
+                await websocket_manager.send_personal_message(response_message, websocket)
+                
+    except WebSocketDisconnect:
+        websocket_manager.disconnect(websocket)
+        logger.info(f"WebSocket client {client_id} disconnected")
+    except Exception as e:
+        logger.error(f"WebSocket error for client {client_id}: {e}")
+        websocket_manager.disconnect(websocket)
+
+# Add REST endpoint to get WebSocket statistics
+@app.get("/api/websocket/stats")
+async def get_websocket_stats():
+    """Get current WebSocket connection statistics."""
+    stats = websocket_manager.get_connection_stats()
+    return {
+        "success": True,
+        "websocket_stats": stats,
+        "message": "WebSocket statistics retrieved successfully"
+    }
+
+# Add REST endpoint to broadcast message to all WebSocket clients
+@app.post("/api/websocket/broadcast")
+async def broadcast_message(message: dict):
+    """Broadcast a message to all connected WebSocket clients via REST API."""
+    if not message.get("message"):
+        raise HTTPException(status_code=400, detail="Message content is required")
+    
+    broadcast_data = {
+        "type": "server_broadcast",
+        "message": message["message"],
+        "timestamp": datetime.now().isoformat(),
+        "source": "REST API"
+    }
+    
+    await websocket_manager.broadcast(json.dumps(broadcast_data))
+    
+    return {
+        "success": True,
+        "message": f"Message broadcasted to {len(websocket_manager.active_connections)} clients",
+        "clients_reached": len(websocket_manager.active_connections)
     }
 
 if __name__ == "__main__":
