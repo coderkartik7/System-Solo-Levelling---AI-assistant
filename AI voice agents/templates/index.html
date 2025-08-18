@@ -3,57 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Conversational Agent</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="static/styles.css">
+    <title>Audio Streaming Test</title>
+    <link rel="stylesheet" href="./static/styles.css">
 </head>
 <body>
-    <!-- Left Sidebar -->
-    <div class="sidebar">
-        <div class="app-header">
-            <h1 class="app-title">AI Conversational Agent</h1>
-            <p class="app-subtitle">Powered by Gemini</p>
-        </div>
-        
-        <div class="user-section">
-            <div class="user-profile">
-                <div>
-                    <img class="user-avatar" src="https://media.istockphoto.com/id/1337144146/vector/default-avatar-profile-icon-vector.jpg?s=612x612&w=0&k=20&c=BIbFwuv7FxTWvh5S3vB6bkT0Qv8Vn8N5Ffseq84ClGI=" height="50px">
-                </div>
-                <input type="text" class="user-name-input" id="userNameInput" placeholder="Enter your name..." value="User">
-            </div>
-        </div>
-        
-        <button class="new-session-btn" id="newSessionBtn" title="Start New Session">+</button>
+    <div class="container">
+        <header>
+            <h1>🎵 Audio Streaming Test Client</h1>
+            <p class="subtitle">Test WebSocket audio streaming functionality</p>
+        </header>
         
         <div class="session-info">
-            <div class="session-label">Session ID:</div>
-            <div class="session-id" id="currentSessionId">Loading...</div>
-        </div>
-    </div>
-
-    <!-- Main Chat Area -->
-    <div class="main-content">
-        <div class="chat-area" id="chatArea">
-            <!-- Status message will appear here -->
-            <div class="status-message ready" id="statusMessage">
-                Ready to chat - Click the microphone to start recording!
+            <h3>Session Information</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Session ID:</label>
+                    <span id="sessionId">Not initialized</span>
+                </div>
+                <div class="info-item">
+                    <label>WebSocket Status:</label>
+                    <span id="wsStatus" class="status-disconnected">Disconnected</span>
+                </div>
+                <div class="info-item">
+                    <label>Stream ID:</label>
+                    <span id="streamId">None</span>
+                </div>
+                <div class="info-item">
+                    <label>Recording Status:</label>
+                    <span id="recordingStatus">Stopped</span>
+                </div>
             </div>
-            <!-- Chat messages will appear here -->
         </div>
-
-        <!-- Audio Player (hidden by default) -->
-        <div class="audio-container">
-            <audio id="audioPlayback" controls style="display: none;"></audio>
+        
+        <div class="controls">
+            <h3>Controls</h3>
+            <div class="button-group">
+                <button id="connectBtn" class="btn-primary">Connect WebSocket</button>
+                <button id="disconnectBtn" class="btn-secondary" disabled>Disconnect</button>
+                <button id="recordBtn" class="btn-record" disabled>🎙️ Start Recording</button>
+                <button id="stopBtn" class="btn-stop" disabled>⏹️ Stop Recording</button>
+            </div>
+            <div class="button-group">
+                <button id="streamInfoBtn" class="btn-info" disabled>Get Stream Info</button>
+                <button id="clearLogBtn" class="btn-secondary">Clear Log</button>
+            </div>
         </div>
-
-        <!-- Bottom Controls -->
-        <div class="controls-area">
-            <button class="record-btn" id="recordBtn" title="Start/Stop Recording">🎙️</button>
-            <button class="stop-conversation-btn" id="stopConversationBtn" title="Stop Conversation" disabled>✕</button>
+        
+        <div class="status-panel">
+            <h3>Current Status</h3>
+            <div id="currentStatus" class="status-display">Ready to connect</div>
+        </div>
+        
+        <div class="log-panel">
+            <h3>Activity Log</h3>
+            <div id="logContainer" class="log-container"></div>
+        </div>
+        
+        <div class="stats-panel">
+            <h3>Streaming Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <label>Chunks Sent:</label>
+                    <span id="chunksSent">0</span>
+                </div>
+                <div class="stat-item">
+                    <label>Bytes Sent:</label>
+                    <span id="bytesSent">0</span>
+                </div>
+                <div class="stat-item">
+                    <label>Duration:</label>
+                    <span id="streamDuration">0s</span>
+                </div>
+                <div class="stat-item">
+                    <label>Data Rate:</label>
+                    <span id="dataRate">0 KB/s</span>
+                </div>
+            </div>
         </div>
     </div>
-
+    
     <script src="./static/script.js"></script>
 </body>
 </html>

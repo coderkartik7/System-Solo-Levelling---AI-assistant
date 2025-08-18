@@ -4,7 +4,7 @@ import logging
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from contextlib import asynccontextmanager
 import json
 import asyncio
@@ -113,8 +113,157 @@ class ConnectionManager:
             ]
         }
 
+class AudioStreamManager:
+    """Manages audio streaming sessions and file handling."""
+    
+    def __init__(self):
+        self.active_streams: Dict[str, dict] = {}
+        self.audio_files: Dict[str, Any] = {}
+        
+        # Create audio streams directory
+        self.streams_dir = config.UPLOADS_DIR / "audio_streams"
+        self.streams_dir.mkdir(exist_ok=True)
+        
+        logger.info("Audio Stream Manager initialized")
+    
+    def start_audio_stream(self, session_id: str, client_id: str = "unknown") -> str:
+        """Start a new audio streaming session."""
+        
+        # Generate unique filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        stream_id = f"stream_{timestamp}_{uuid.uuid4().hex[:8]}"
+        filename = f"{stream_id}_{client_id}.webm"
+        filepath = self.streams_dir / filename
+        
+        # Initialize stream info
+        stream_info = {
+            "stream_id": stream_id,
+            "session_id": session_id,
+            "client_id": client_id,
+            "filepath": filepath,
+            "filename": filename,
+            "started_at": datetime.now().isoformat(),
+            "chunks_received": 0,
+            "total_bytes": 0,
+            "is_active": True
+        }
+        
+        # Open file for binary writing
+        try:
+            file_handle = open(filepath, "wb")
+            self.audio_files[stream_id] = file_handle
+            self.active_streams[stream_id] = stream_info
+            
+            logger.info(f"Started audio stream: {stream_id} -> {filepath}")
+            return stream_id
+            
+        except Exception as e:
+            logger.error(f"Failed to start audio stream: {e}")
+            raise Exception(f"Could not start audio stream: {e}")
+    
+    def write_audio_chunk(self, stream_id: str, audio_data: bytes) -> bool:
+        """Write audio chunk to the stream file."""
+        
+        if stream_id not in self.active_streams:
+            logger.error(f"Stream {stream_id} not found")
+            return False
+        
+        if stream_id not in self.audio_files:
+            logger.error(f"File handle for stream {stream_id} not found")
+            return False
+        
+        try:
+            file_handle = self.audio_files[stream_id]
+            file_handle.write(audio_data)
+            file_handle.flush()  # Ensure data is written immediately
+            
+            # Update stream statistics
+            stream_info = self.active_streams[stream_id]
+            stream_info["chunks_received"] += 1
+            stream_info["total_bytes"] += len(audio_data)
+            
+            logger.debug(f"Wrote {len(audio_data)} bytes to stream {stream_id} (chunk #{stream_info['chunks_received']})")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to write audio chunk to stream {stream_id}: {e}")
+            return False
+    
+    def stop_audio_stream(self, stream_id: str) -> dict:
+        """Stop an audio streaming session."""
+        
+        if stream_id not in self.active_streams:
+            return {"success": False, "error": "Stream not found"}
+        
+        try:
+            # Close file handle
+            if stream_id in self.audio_files:
+                self.audio_files[stream_id].close()
+                del self.audio_files[stream_id]
+            
+            # Update stream info
+            stream_info = self.active_streams[stream_id]
+            stream_info["is_active"] = False
+            stream_info["ended_at"] = datetime.now().isoformat()
+            
+            # Get final statistics
+            result = {
+                "success": True,
+                "stream_id": stream_id,
+                "filepath": str(stream_info["filepath"]),
+                "filename": stream_info["filename"],
+                "chunks_received": stream_info["chunks_received"],
+                "total_bytes": stream_info["total_bytes"],
+                "duration": stream_info.get("ended_at", "N/A"),
+                "file_exists": stream_info["filepath"].exists()
+            }
+            
+            logger.info(f"Stopped audio stream {stream_id}: {result['chunks_received']} chunks, {result['total_bytes']} bytes")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to stop audio stream {stream_id}: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def get_stream_info(self, stream_id: str) -> Optional[dict]:
+        """Get information about an active stream."""
+        if stream_id in self.active_streams:
+            return self.active_streams[stream_id].copy()
+        return None
+    
+    def cleanup_inactive_streams(self):
+        """Clean up any streams that weren't properly closed."""
+        cleanup_count = 0
+        
+        for stream_id in list(self.active_streams.keys()):
+            stream_info = self.active_streams[stream_id]
+            
+            if stream_info["is_active"]:
+                # Check if file handle still exists
+                if stream_id in self.audio_files:
+                    try:
+                        # Try to close the file handle
+                        self.audio_files[stream_id].close()
+                        del self.audio_files[stream_id]
+                        cleanup_count += 1
+                        
+                        # Mark as inactive
+                        stream_info["is_active"] = False
+                        stream_info["ended_at"] = datetime.now().isoformat()
+                        
+                    except Exception as e:
+                        logger.error(f"Error cleaning up stream {stream_id}: {e}")
+        
+        if cleanup_count > 0:
+            logger.info(f"Cleaned up {cleanup_count} inactive audio streams")
+    
+    def get_all_streams(self) -> list:
+        """Get information about all streams."""
+        return list(self.active_streams.values())
+
 # Initialize the connection manager (add this after your other global instances)
 websocket_manager = ConnectionManager()
+audio_stream_manager = AudioStreamManager()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -563,6 +712,183 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.error(f"WebSocket error: {e}")
         websocket_manager.disconnect(websocket)
 
+@app.websocket("/ws/audio/{session_id}")
+async def audio_streaming_endpoint(websocket: WebSocket, session_id: str):
+    """
+    WebSocket endpoint for streaming audio data from client to server.
+    
+    Protocol:
+    1. Client connects with session_id
+    2. Client sends 'start_stream' message to begin
+    3. Client sends binary audio chunks
+    4. Client sends 'stop_stream' message to end
+    """
+    client_id = f"audio_client_{session_id}"
+    
+    await websocket_manager.connect(websocket, client_id)
+    
+    current_stream_id = None
+    
+    # Send welcome message
+    welcome_message = {
+        "type": "audio_welcome",
+        "session_id": session_id,
+        "message": "Connected to audio streaming endpoint. Send 'start_stream' to begin.",
+        "timestamp": datetime.now().isoformat()
+    }
+    await websocket_manager.send_personal_message(json.dumps(welcome_message), websocket)
+    
+    try:
+        while True:
+            # Receive message (could be text command or binary audio data)
+            message = await websocket.receive()
+            
+            # Handle text messages (commands)
+            if "text" in message:
+                try:
+                    command_data = json.loads(message["text"])
+                    command_type = command_data.get("type")
+                    
+                    if command_type == "start_stream":
+                        # Start new audio stream
+                        try:
+                            current_stream_id = audio_stream_manager.start_audio_stream(
+                                session_id=session_id,
+                                client_id=client_id
+                            )
+                            
+                            response = {
+                                "type": "stream_started",
+                                "stream_id": current_stream_id,
+                                "session_id": session_id,
+                                "message": "Audio streaming started. Send binary audio data.",
+                                "timestamp": datetime.now().isoformat()
+                            }
+                            await websocket_manager.send_personal_message(json.dumps(response), websocket)
+                            
+                        except Exception as e:
+                            error_response = {
+                                "type": "error",
+                                "message": f"Failed to start audio stream: {str(e)}",
+                                "timestamp": datetime.now().isoformat()
+                            }
+                            await websocket_manager.send_personal_message(json.dumps(error_response), websocket)
+                    
+                    elif command_type == "stop_stream":
+                        # Stop current audio stream
+                        if current_stream_id:
+                            result = audio_stream_manager.stop_audio_stream(current_stream_id)
+                            
+                            response = {
+                                "type": "stream_stopped",
+                                "stream_id": current_stream_id,
+                                "result": result,
+                                "timestamp": datetime.now().isoformat()
+                            }
+                            await websocket_manager.send_personal_message(json.dumps(response), websocket)
+                            
+                            current_stream_id = None
+                        else:
+                            error_response = {
+                                "type": "error",
+                                "message": "No active stream to stop",
+                                "timestamp": datetime.now().isoformat()
+                            }
+                            await websocket_manager.send_personal_message(json.dumps(error_response), websocket)
+                    
+                    elif command_type == "stream_info":
+                        # Get current stream info
+                        if current_stream_id:
+                            stream_info = audio_stream_manager.get_stream_info(current_stream_id)
+                            response = {
+                                "type": "stream_info",
+                                "stream_info": stream_info,
+                                "timestamp": datetime.now().isoformat()
+                            }
+                        else:
+                            response = {
+                                "type": "stream_info",
+                                "message": "No active stream",
+                                "timestamp": datetime.now().isoformat()
+                            }
+                        await websocket_manager.send_personal_message(json.dumps(response), websocket)
+                    
+                    else:
+                        # Unknown command
+                        error_response = {
+                            "type": "error",
+                            "message": f"Unknown command: {command_type}",
+                            "timestamp": datetime.now().isoformat()
+                        }
+                        await websocket_manager.send_personal_message(json.dumps(error_response), websocket)
+                        
+                except json.JSONDecodeError:
+                    # Handle plain text commands
+                    command = message["text"].strip().lower()
+                    
+                    if command == "start":
+                        current_stream_id = audio_stream_manager.start_audio_stream(
+                            session_id=session_id,
+                            client_id=client_id
+                        )
+                        response = f"Audio streaming started: {current_stream_id}"
+                        await websocket_manager.send_personal_message(response, websocket)
+                    
+                    elif command == "stop":
+                        if current_stream_id:
+                            result = audio_stream_manager.stop_audio_stream(current_stream_id)
+                            response = f"Audio streaming stopped: {result}"
+                            current_stream_id = None
+                        else:
+                            response = "No active stream to stop"
+                        await websocket_manager.send_personal_message(response, websocket)
+                    
+                    else:
+                        response = f"Unknown command: {command}. Use 'start' or 'stop'"
+                        await websocket_manager.send_personal_message(response, websocket)
+            
+            # Handle binary messages (audio data)
+            elif "bytes" in message:
+                if current_stream_id:
+                    audio_data = message["bytes"]
+                    success = audio_stream_manager.write_audio_chunk(current_stream_id, audio_data)
+                    
+                    if not success:
+                        error_response = {
+                            "type": "error",
+                            "message": "Failed to write audio chunk",
+                            "timestamp": datetime.now().isoformat()
+                        }
+                        await websocket_manager.send_personal_message(json.dumps(error_response), websocket)
+                else:
+                    # No active stream - send error
+                    error_response = {
+                        "type": "error",
+                        "message": "No active stream. Send 'start_stream' first.",
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    await websocket_manager.send_personal_message(json.dumps(error_response), websocket)
+    
+    except WebSocketDisconnect:
+        # Clean up on disconnect
+        if current_stream_id:
+            result = audio_stream_manager.stop_audio_stream(current_stream_id)
+            logger.info(f"Auto-stopped stream {current_stream_id} on client disconnect: {result}")
+        
+        websocket_manager.disconnect(websocket)
+        logger.info(f"Audio streaming client {client_id} disconnected")
+    
+    except Exception as e:
+        logger.error(f"Audio streaming error for {client_id}: {e}")
+        
+        # Clean up on error
+        if current_stream_id:
+            result = audio_stream_manager.stop_audio_stream(current_stream_id)
+            logger.info(f"Auto-stopped stream {current_stream_id} on error: {result}")
+        
+        websocket_manager.disconnect(websocket)
+
+
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint_with_id(websocket: WebSocket, client_id: str):
     """
@@ -681,6 +1007,47 @@ async def broadcast_message(message: dict):
         "message": f"Message broadcasted to {len(websocket_manager.active_connections)} clients",
         "clients_reached": len(websocket_manager.active_connections)
     }
+
+
+@app.get("/api/audio/streams")
+async def get_audio_streams():
+    """Get information about all audio streams."""
+    streams = audio_stream_manager.get_all_streams()
+    
+    return {
+        "success": True,
+        "total_streams": len(streams),
+        "streams": streams,
+        "message": "Audio streams retrieved successfully"
+    }
+
+@app.get("/api/audio/streams/{stream_id}")
+async def get_audio_stream_info(stream_id: str):
+    """Get information about a specific audio stream."""
+    stream_info = audio_stream_manager.get_stream_info(stream_id)
+    
+    if stream_info:
+        return {
+            "success": True,
+            "stream_info": stream_info,
+            "message": "Stream info retrieved successfully"
+        }
+    else:
+        raise HTTPException(status_code=404, detail="Stream not found")
+
+@app.post("/api/audio/cleanup")
+async def cleanup_audio_streams():
+    """Clean up inactive audio streams."""
+    try:
+        audio_stream_manager.cleanup_inactive_streams()
+        
+        return {
+            "success": True,
+            "message": "Audio streams cleaned up successfully"
+        }
+    except Exception as e:
+        logger.error(f"Failed to cleanup audio streams: {e}")
+        raise HTTPException(status_code=500, detail="Failed to cleanup streams")
 
 if __name__ == "__main__":
     print("🚀 Starting Enhanced AI Voice Conversational Agent v2.0.0...")
