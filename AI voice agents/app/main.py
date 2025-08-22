@@ -1,5 +1,8 @@
 import json
 import asyncio
+import websockets
+import base64
+import random
 from datetime import datetime
 import assemblyai as aai
 from google import genai
@@ -86,12 +89,57 @@ class StreamManager:
             llm_text = response.text
             print(f"🤖 LLM Response: {llm_text}")
             await self._send_to_websocket({"type": "llm_response", "text": llm_text})
+            
+            # Send to Murf for TTS
+            await self._send_to_murf(llm_text)
+            
         except Exception as e:
             print(f"❌ LLM Error: {e}")
             await self._send_to_websocket({
                 "type": "llm_response", 
                 "text": f"Sorry, I encountered an error: {str(e)}"
             })
+    
+    async def _send_to_murf(self, text):
+        """Send text to Murf WebSocket for TTS and get base64 audio"""
+        try:
+            murf_ws_url = "wss://api.murf.ai/v1/speech/stream-input"
+            headers = {"api-key": f"{config.MURF_API_KEY}"}
+        
+            print(f"🔗 Connecting to Murf WebSocket...")
+            async with websockets.connect(murf_ws_url, additional_headers=headers) as murf_ws:
+            
+                request = {
+                    "context_id": f"turn_{int(asyncio.get_event_loop().time())}",
+                    "text": text,
+                    "voice_config": {
+                        "voice_id" : "en-US-Daniel",
+                        "style":"Inspirational"},
+                    "format": "mp3",
+                    "sample_rate": 24000
+                }
+            
+                await murf_ws.send(json.dumps(request))
+                print(f"🎵 Sent to Murf: {text[:50]}...")
+                text_msg = {
+                    "text" : text,
+                    "end" :True
+                }
+                await murf_ws.send(json.dumps(text_msg))
+                while True:
+                    response = await murf_ws.recv()
+                    audio_data = json.loads(response)
+                    if "audio" in audio_data:
+                        print("Murf Audio:",audio_data["audio"][:30],"...")
+                        base64_audio = base64.b64decode(audio_data["audio"])
+                        if len(base64_audio)>44:
+                            base64_audio = f"{base64_audio[:30]} ..."
+                            print(f"Base64 audio{base64_audio}")
+                        await self._send_to_websocket({"type" : "audio_chunk", "data" : audio_data["audio"]})
+                    if audio_data.get("final"):
+                        break
+        except Exception as e:
+            print(f"❌ Murf WebSocket Error: {e}")
     
     def on_termination(self, client, event: TerminationEvent):
         print(f"🛑 Session terminated after {event.audio_duration_seconds} s")
@@ -108,8 +156,6 @@ class StreamManager:
     
     def send_audio(self, audio_data):
         if self.client and len(audio_data) > 0:
-            # Send the audio data directly - no more splitting!
-            # The frontend now sends proper chunks
             print(f"📡 Sending audio chunk: {len(audio_data)} bytes")
             self.client.stream(audio_data)
     
