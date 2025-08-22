@@ -22,7 +22,10 @@ AI voice agents/
 │   │   └── config.py
 │   └── main.py
 ├── static/
+│   ├── script.js
+│   └── styles.css
 ├── templates/
+│   └── index.html
 ├── uploads/
 ├── .env
 ├── .gitignore
@@ -166,7 +169,7 @@ AI voice agents/
 
 ---
 
-### **Day 12: Enhanced UI and also removed echo bot & AI voice generator
+### **Day 12: Enhanced UI and also removed echo bot & AI voice generator**
 - ➕ “New Session” button 
 - Changed the old looking UI to modern LLM UI's like Gemini, ChatGPT,etc 
 - Single toggle start/stop recording button
@@ -201,13 +204,122 @@ AI voice agents/
 ✅ Using Python’s `logging` module effectively  
 ✅ Writing cleaner, more modular code
 
+---
+### **Streaming Branch** 
+---
+
+### **Day 15: WebSocket Connection**
+- Created a **`/ws` WebSocket endpoint** in FastAPI.  
+- Established real-time connection between **client ↔ server**.  
+- Implemented echo functionality: server sends back the same message received from client (tested via Postman).  
+- Worked on a **separate `streaming` branch** to keep non-streaming code safe.  
+
+**Skills Learned:**  
+✅ FastAPI WebSocket setup  
+✅ Real-time message echo testing  
+
+---
+
+### **Day 16: Streaming Audio**
+- Extended recording logic on client to **stream audio chunks via WebSockets** at intervals.  
+- Server received binary audio data through WebSocket and **saved it to a file**.  
+- Verified audio reception and storage (no transcription/LLM yet).  
+
+**Skills Learned:**  
+✅ Streaming binary data over WebSockets  
+✅ Audio file handling on the server  
+
+---
+
+### **Day 17: WebSockets + AssemblyAI**
+- Integrated **AssemblyAI Python SDK** with streaming WebSocket audio.  
+- Converted audio into required **16kHz, 16-bit, mono PCM format**.  
+- Transcriptions were generated in real-time and printed to console (or UI).  
+
+**Skills Learned:**  
+✅ Live transcription with AssemblyAI  
+✅ Audio preprocessing for STT  
+
+---
+
+### **Day 18: Turn Detection**
+- Used AssemblyAI’s **streaming API with turn detection**.  
+- Detected when the user stopped talking.  
+- Server notified client of **end-of-turn events** via WebSocket.  
+- Displayed **finalized transcription** on the UI after each turn.  
+
+**Skills Learned:**  
+✅ Turn detection in speech streams  
+✅ Real-time server → client updates via WebSocket  
+
+---
+
+### **Day 19: Streaming LLM Responses**
+- After receiving a finalized transcript → sent it to **Gemini LLM API**.  
+- Used `streamGenerateContent` to **stream LLM response chunks**.  
+- Accumulated responses and printed them to console (no UI yet).  
+
+**Skills Learned:**  
+✅ Streaming responses from LLM  
+✅ Handling incremental response chunks 
+
+---
+
+### **Day 20: Streaming LLM → Murf Voice via WebSockets**
+- Integrated **Gemini LLM streaming responses** with **Murf TTS** over WebSockets.  
+- Workflow:  
+  1. Sent **streaming LLM responses** (from Gemini) to Murf WebSocket API.  
+  2. Murf returned **audio in base64 format**.  
+  3. Printed encoded audio directly in server console for verification.  
+  4. Used a static **`context_id`** in Murf WebSocket requests to avoid context overflow.  
+
+**Skills Learned:**  
+✅ Streaming text → speech in real-time  
+✅ Handling base64 audio over WebSockets  
+✅ Managing Murf WebSocket sessions with context_id  
+
+---
+
+### **Day 21: Streaming Audio Data to the Client**
+- Extended WebSocket logic to **send streaming audio data from server → client** in real time.  
+- On the client side:  
+  - **Accumulated base64 chunks** into an array.  
+  - Printed **acknowledgements** on console confirming successful reception of audio data.  
+
+**Skills Learned:**  
+✅ Server → client streaming over WebSockets  
+✅ Handling real-time base64 audio data  
+✅ Ensuring reliable audio delivery with acknowledgements  
+
+---
+
 ## 🛠️ Tech Stack
-- **Backend:** FastAPI (Python)
-- **Frontend:** HTML, CSS, JavaScript
-- **APIs Used:**  
-  - Murf API (Text-to-Speech)  
-  - AssemblyAI (Speech-to-Text)  
-  - Google Gemini API (LLM)
-- **Other Tools:** `.env` for secrets
+
+### **Backend**
+- **FastAPI (Python)** – Core backend framework
+- **WebSockets (FastAPI + WebSocket API)** – Real-time audio & text streaming
+- **uvicorn** – ASGI server for running FastAPI apps
+
+### **Frontend**
+- **HTML, CSS, JavaScript**
+- **WebSocket API (Browser)** – Sending/receiving streaming data
+
+### **AI & APIs**
+- **Murf API** – Text-to-Speech (REST + WebSocket)
+- **AssemblyAI API** – Speech-to-Text (file upload + streaming + turn detection)
+- **Google Gemini API** – Large Language Model (text + streaming responses)
+
+### **Data Handling**
+- **In-memory datastore (Python dict)** – Session-based chat history
+- **Base64 encoding** – Audio transmission
+- **PCM Audio (16kHz, 16-bit, mono)** – Format required for STT streaming
+- **File uploads & storage** – Temporary audio storage for testing
+
+### **Other Tools**
+- **dotenv** – API key management via `.env`
+- **Postman** – API testing
+- **Git + GitHub** – Version control
+- **Branching strategy** – Separate `streaming` branch for WebSocket features
+
 
 ---
