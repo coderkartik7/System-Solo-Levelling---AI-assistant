@@ -3,85 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Streaming Test</title>
+    <title>Voice AI</title>
     <link rel="stylesheet" href="./static/styles.css">
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🎵 Audio Streaming Test Client</h1>
-            <p class="subtitle">Test WebSocket audio streaming functionality</p>
-        </header>
-        
-        <div class="session-info">
-            <h3>Session Information</h3>
-            <div class="info-grid">
-                <div class="info-item">
-                    <label>Session ID:</label>
-                    <span id="sessionId">Not initialized</span>
-                </div>
-                <div class="info-item">
-                    <label>WebSocket Status:</label>
-                    <span id="wsStatus" class="status-disconnected">Disconnected</span>
-                </div>
-                <div class="info-item">
-                    <label>Stream ID:</label>
-                    <span id="streamId">None</span>
-                </div>
-                <div class="info-item">
-                    <label>Recording Status:</label>
-                    <span id="recordingStatus">Stopped</span>
-                </div>
-            </div>
-        </div>
+        <h1>🎙️ Voice AI with Turn Detection</h1>
         
         <div class="controls">
-            <h3>Controls</h3>
-            <div class="button-group">
-                <button id="connectBtn" class="btn-primary">Connect WebSocket</button>
-                <button id="disconnectBtn" class="btn-secondary" disabled>Disconnect</button>
-                <button id="recordBtn" class="btn-record" disabled>🎙️ Start Recording</button>
-                <button id="stopBtn" class="btn-stop" disabled>⏹️ Stop Recording</button>
-            </div>
-            <div class="button-group">
-                <button id="streamInfoBtn" class="btn-info" disabled>Get Stream Info</button>
-                <button id="clearLogBtn" class="btn-secondary">Clear Log</button>
-            </div>
+            <button id="startBtn" class="start">Start Recording</button>
+            <button id="stopBtn" class="stop" disabled>Stop Recording</button>
         </div>
         
-        <div class="status-panel">
-            <h3>Current Status</h3>
-            <div id="currentStatus" class="status-display">Ready to connect</div>
-        </div>
+        <div id="status" class="status disconnected">Disconnected</div>
         
-        <div class="log-panel">
-            <h3>Activity Log</h3>
-            <div id="logContainer" class="log-container"></div>
-        </div>
-        
-        <div class="stats-panel">
-            <h3>Streaming Statistics</h3>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <label>Chunks Sent:</label>
-                    <span id="chunksSent">0</span>
-                </div>
-                <div class="stat-item">
-                    <label>Bytes Sent:</label>
-                    <span id="bytesSent">0</span>
-                </div>
-                <div class="stat-item">
-                    <label>Duration:</label>
-                    <span id="streamDuration">0s</span>
-                </div>
-                <div class="stat-item">
-                    <label>Data Rate:</label>
-                    <span id="dataRate">0 KB/s</span>
-                </div>
-            </div>
+        <div class="transcriptions">
+            <h3>Conversations:</h3>
+            <div id="messages"></div>
         </div>
     </div>
-    
-    <script src="./static/script.js"></script>
+
+    <script src="/static/script.js"></script>
 </body>
 </html>
