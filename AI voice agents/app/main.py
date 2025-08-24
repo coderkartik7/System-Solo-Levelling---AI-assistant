@@ -2,8 +2,6 @@ import json
 import asyncio
 import websockets
 import base64
-import random
-from datetime import datetime
 import assemblyai as aai
 from google import genai
 from fastapi import FastAPI, WebSocket
@@ -34,6 +32,7 @@ class StreamManager:
         self.websocket = None
         self.current_turn = ""
         self.loop = None
+        self.chatHistory = []
         
     async def start_transcription(self, websocket):
         self.websocket = websocket
@@ -82,11 +81,29 @@ class StreamManager:
     async def _get_llm_response(self, text):
         print(f"🤖 Sending to LLM: {text}")
         try:
+            # Add user chat to history
+            self.chatHistory.append({"role":"user","content":text})
+
+            conversation_context = ""
+            for msg in self.chatHistory[-10:]:
+                role = "Human" if msg["role"] == "user" else "System"
+                conversation_context += f"{role}:{msg['content']}\n"
+
+            prompt = f"""You are a friendly and helpful AI assistant.
+                        Your Name is System. 
+                        And You are Created, Developed and trained by Kartik Garg
+                        Here's our conversation hsitory : {conversation_context}
+                        Respond naturally to the latest message."""
+
             response = gemini_client.models.generate_content(
                 model="gemini-2.0-flash-exp",
-                contents=text
+                contents=prompt
             )
             llm_text = response.text
+
+            #Add assistant response to history
+            self.chatHistory.append({"role":"System","content":llm_text})
+
             print(f"🤖 LLM Response: {llm_text}")
             await self._send_to_websocket({"type": "llm_response", "text": llm_text})
             
@@ -162,6 +179,10 @@ class StreamManager:
     def stop(self):
         if self.client:
             self.client.disconnect(terminate=True)
+    
+    def reset_chat_history(self):
+        self.chatHistory = []
+        print("🔄 Chat history reset")
 
 stream_manager = StreamManager()
 
