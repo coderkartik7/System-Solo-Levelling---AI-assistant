@@ -3,26 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> AI Assistant </title>
+    <title>SYSTEM</title>
     <link rel="stylesheet" href="./static/styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>🎙️ AI Assistant </h1>
-        
-        <div class="controls">
-            <button id="startBtn" class="start">Start Recording</button>
-            <button id="stopBtn" class="stop" disabled>Stop Recording</button>
+        <div class="header">
+            <h1 class="system-title">SYSTEM</h1>
+            <div class="pulse-animation"></div>
         </div>
         
-        <div id="status" class="status disconnected">Disconnected</div>
+        <div class="controls">
+            <button id="startBtn" class="start">INITIATE RECORDING</button>
+            <button id="stopBtn" class="stop" disabled>TERMINATE RECORDING</button>
+        </div>
+        
+        <div id="status" class="status disconnected">
+            <span class="status-icon">◉</span> SYSTEM OFFLINE
+        </div>
         
         <div class="transcriptions">
-            <h3>Conversations:</h3>
+            <div class="log-header">
+                <span class="blinking">▶</span> COMMUNICATION LOG
+            </div>
             <div id="messages"></div>
         </div>
     </div>
 
-    <script src="/static/script.js"></script>
+    <div class="terminal-lines"></div>
+    
+    <script src="./static/script.js"></script>
 </body>
 </html>
