@@ -293,6 +293,47 @@ AI voice agents/
 
 ---
 
+### **Day 22 – Seamless Real-Time Audio Playback 🔊⚡**
+- Implemented **real-time audio playback** in the browser.
+- Received and buffered base64 audio chunks from the server.
+- Stitched chunks together for **smooth, continuous playback**.
+- Eliminated pauses → AI voice now flows naturally.
+
+**Skills Learned:**  
+✅ Handling **audio streams** efficiently in the browser.  
+✅ Buffering + decoding **base64 audio chunks** in real time.  
+✅ Achieving **low-latency playback** for seamless user experience.
+
+---
+
+### **Day 23 – Complete Conversational Agent 🤖🎙️**
+- Integrated all components into a single end-to-end pipeline:
+  - Capture + stream **user audio** (client → server).
+  - **Real-time transcription** via AssemblyAI.
+  - Pass transcript to **Gemini LLM** for reasoning.
+  - Maintain **chat history** for context.
+  - Generate natural voice using **Murf TTS**.
+  - Stream **audio back to the client** for playback.
+- Achieved a fully functional, streaming conversational agent.
+
+**Skills Learned:**  
+✅ Designing a **modular, end-to-end system** with multiple APIs.  
+✅ Managing **real-time data flow** between client and server.  
+✅ Synchronizing **voice, transcription, and LLM reasoning** for fluid conversations.
+
+---
+
+### **Day 24 – Adding a Persona 🧙⚔️**
+- Introduced **System persona** for the LLM.
+- Persona inspired by *Solo Leveling* ⚡ → gives the agent a unique tone + style.
+- Conversations feel more **immersive and engaging**.
+- Set foundation for **multi-persona conversational agents**.
+
+**Skills Learned:**  
+✅ Prompt engineering with **system personas** for LLMs.  
+✅ Controlling **tone, style, and character** in AI responses.  
+✅ Understanding the role of **personas** in making AI interactions engaging + human-like.
+
 ## 🛠️ Tech Stack
 
 ### **Backend**
