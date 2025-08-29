@@ -15,7 +15,7 @@ pathlib2==2.3.7
 assemblyai==0.27.0
 
 # Google Gemini AI
-google-generativeai==0.3.2
+google-genai==1.32.0
 
 # Optional: For development and testing
 pytest==7.4.3
@@ -26,3 +26,6 @@ colorlog==6.8.0
 
 # Websockets
 websockets==12.0
+
+#Assembly AI
+assemblyai==0.27.0
