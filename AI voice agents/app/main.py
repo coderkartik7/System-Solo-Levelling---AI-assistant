@@ -1,3 +1,5 @@
+import requests
+from urllib.parse import quote
 import json
 import asyncio
 import websockets
@@ -16,6 +18,7 @@ from assemblyai.streaming.v3 import (
     StreamingEvents, BeginEvent, TurnEvent,
     TerminationEvent, StreamingError
 )
+import re
 
 # Initialize services
 aai.settings.api_key = config.ASSEMBLY_API_KEY
@@ -28,11 +31,18 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 class StreamManager:
     def __init__(self):
+        self.api_keys={}
         self.client = None
         self.websocket = None
         self.current_turn = ""
         self.loop = None
         self.chatHistory = []
+    
+    def updateApiKeys(self, keys):
+        self.api_keys = keys
+        if keys.get('assemblyai'):
+            aai.settings.api_key = keys['assemblyai']
+
         
     async def start_transcription(self, websocket):
         self.websocket = websocket
@@ -53,6 +63,28 @@ class StreamManager:
         self.client.connect(
             StreamingParameters(sample_rate=16000, format_turns=False)
         )
+
+    async def _search_web(self, query):
+        """Search the web and return results"""
+        try:
+            # If no search API key is configured, use a mock response
+            if not hasattr(config, 'SEARCH_API_KEY') or not config.SEARCH_API_KEY:
+                return f"Mock search results for '{query}':\n• Example result 1\n• Example result 2\n• Example result 3"
+                
+            # Example using SerpAPI (you can use any search API)
+            url = f"https://serpapi.com/search.json?q={quote(query)}&api_key={config.SEARCH_API_KEY}"
+            response = requests.get(url)
+            data = response.json()
+        
+            # Extract top 3-5 results
+            results = []
+            for result in data.get('organic_results', [])[:3]:
+                results.append(f"• {result.get('title', '')}: {result.get('snippet', '')}")
+        
+            return "\n".join(results) if results else "No search results found."
+        except Exception as e:
+            print(f"Search error: {e}")
+            return f"Search error: {str(e)}"
         
     def on_begin(self, client, event: BeginEvent):
         print(f"🎤 Session started: {event.id}")
@@ -81,6 +113,36 @@ class StreamManager:
     async def _get_llm_response(self, text):
         print(f"🤖 Sending to LLM: {text}")
         try:
+            # Improved search detection with more patterns
+            search_patterns = [
+                r"search (?:for|about) (.+)",
+                r"look up (.+)",
+                r"find (?:information|details) (?:on|about) (.+)",
+                r"what is (.+)",
+                r"who is (.+)",
+                r"how to (.+)",
+                r"tell me about (.+)",
+                r"explain (.+)",
+                r"web search (.+)",
+                r"internet search (.+)"
+            ]
+            
+            search_query = None
+            context = ""
+            
+            # Check if any search pattern matches
+            for pattern in search_patterns:
+                match = re.search(pattern, text.lower())
+                if match:
+                    search_query = match.group(1).strip()
+                    break
+            
+            # If we found a search query, perform the search
+            if search_query:
+                await self._send_to_websocket({"type": "searching"})
+                search_results = await self._search_web(search_query)
+                context = f"Search results for '{search_query}':\n{search_results}"
+            
             # Add user chat to history
             self.chatHistory.append({"role":"user","content":text})
 
@@ -90,11 +152,17 @@ class StreamManager:
                 conversation_context += f"{role}:{msg['content']}\n"
 
             prompt = f"""You are a friendly and helpful AI assistant.
-                        You are playing a role named System in Solo Levelling
-                        Act as system and the person chatting with you is the Greatest Sung Jinwoo also known as Hunter Sung 
-                        Here's our conversation history : {conversation_context}
-                        Respond like system in Solo leveling.
-                        And do not add sounds like beep boop because it cannot be played"""
+                You are playing a role named System in Solo Levelling
+                Act as system and the person chatting with you is the Greatest Sung Jinwoo also known as Hunter Sung 
+                Here's our conversation history : {conversation_context}
+                
+                {f"Additional context from web search: {context}" if context else ""}
+                
+                You've to respond like system in Solo leveling but if sung jinwoo asks for extra info
+                like searching for the web for any info Then you just have to sound like SYSTEM and give
+                any info Hunter sung demands provide it as all llm provide and search on web.
+                If you were provided search results, incorporate them naturally into your response.
+                However you can answer the question that are not related to Solo leveling"""
 
             response = gemini_client.models.generate_content(
                 model="gemini-2.0-flash-exp",
@@ -102,7 +170,7 @@ class StreamManager:
             )
             llm_text = response.text
 
-            #Add assistant response to history
+            # Add assistant response to history
             self.chatHistory.append({"role":"System","content":llm_text})
 
             print(f"🤖 LLM Response: {llm_text}")
@@ -148,11 +216,6 @@ class StreamManager:
                     response = await murf_ws.recv()
                     audio_data = json.loads(response)
                     if "audio" in audio_data:
-                        print("Murf Audio:",audio_data["audio"][:30],"...")
-                        base64_audio = base64.b64decode(audio_data["audio"])
-                        if len(base64_audio)>44:
-                            base64_audio = f"{base64_audio[:30]} ..."
-                            print(f"Base64 audio{base64_audio}")
                         await self._send_to_websocket({"type" : "audio_chunk", "data" : audio_data["audio"]})
                     if audio_data.get("final"):
                         break
@@ -174,7 +237,6 @@ class StreamManager:
     
     def send_audio(self, audio_data):
         if self.client and len(audio_data) > 0:
-            print(f"📡 Sending audio chunk: {len(audio_data)} bytes")
             self.client.stream(audio_data)
     
     def stop(self):
@@ -206,6 +268,8 @@ async def websocket_endpoint(websocket: WebSocket):
             if "text" in message:
                 data = json.loads(message["text"])
                 if data.get("type") == "start":
+                    if data.get("apiKeys"):
+                        stream_manager.updateApiKeys(data["apiKeys"])
                     print("▶️ Starting transcription session")
                     await websocket.send_text(json.dumps({"type": "ready"}))
             
