@@ -8,9 +8,6 @@ requests==2.31.0
 # Environment variables
 python-dotenv==1.0.0
 
-# Data validation
-pydantic==2.5.0
-
 # File handling and utilities
 pathlib2==2.3.7
 
