@@ -9,7 +9,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from typing import Optional
-import config
+from app import config
 from pathlib import Path
 from assemblyai.streaming.v3 import (
     StreamingClient, StreamingClientOptions,
