@@ -299,3 +299,20 @@ button:hover::before {
         font-size: 14px;
     }
 }
+
+.search-response {
+    border-left-color: #ffcc00;
+    background: rgba(40, 40, 0, 0.3);
+}
+
+.search-status {
+    border-left-color: #ff8800;
+    background: rgba(40, 20, 0, 0.3);
+    font-style: italic;
+}
+
+.config-toggle { position: absolute; top: 20px; right: 20px; padding: 10px; }
+.config-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.config-modal.hidden { display: none; }
+.config-content { background: rgba(10,15,30,0.9); padding: 30px; border-radius: 5px; border: 1px solid rgba(0,150,255,0.3); }
+.config-content input { width: 100%; margin: 10px 0; padding: 10px; background: rgba(0,20,40,0.5); border: 1px solid rgba(0,150,255,0.3); color: #e0e0ff; border-radius: 3px; }

@@ -7,6 +7,20 @@
     <link rel="stylesheet" href="./static/styles.css">
 </head>
 <body>
+    <div class="config-panel">
+        <button id="configBtn" class="config-toggle">⚙️ CONFIG</button>
+        <div id="configModal" class="config-modal hidden">
+            <div class="config-content">
+                <h3>API Configuration</h3>
+                <input type="text" id="assemblyKey" placeholder="AssemblyAI API Key" />
+                <input type="text" id="geminiKey" placeholder="Gemini API Key" />
+                <input type="text" id="murfKey" placeholder="Murf API Key" />
+                <input type="text" id="searchKey" placeholder="Search API Key (optional)" />
+                <button id="saveConfig" class="start">Save</button>
+                <button id="closeConfig" class="stop">Close</button>
+            </div>
+        </div>
+    </div>
     <div class="container">
         <div class="header">
             <h1 class="system-title">SYSTEM</h1>
