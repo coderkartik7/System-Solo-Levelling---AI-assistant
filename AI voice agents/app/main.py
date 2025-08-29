@@ -5,7 +5,6 @@ import asyncio
 import websockets
 import base64
 import assemblyai as aai
-from google import genai
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -22,7 +21,6 @@ import re
 
 # Initialize services
 aai.settings.api_key = config.ASSEMBLY_API_KEY
-gemini_client = genai.Client(api_key=config.GEMINI_API_KEY)
 
 app = FastAPI()
 STATIC_DIR = Path(__file__).parent.parent / "static"
@@ -164,11 +162,7 @@ class StreamManager:
                 If you were provided search results, incorporate them naturally into your response.
                 However you can answer the question that are not related to Solo leveling"""
 
-            response = gemini_client.models.generate_content(
-                model="gemini-2.0-flash-exp",
-                contents=prompt
-            )
-            llm_text = response.text
+            llm_text = call_gemini_api(prompt, config.GEMINI_API_KEY)
 
             # Add assistant response to history
             self.chatHistory.append({"role":"System","content":llm_text})
@@ -281,6 +275,22 @@ async def websocket_endpoint(websocket: WebSocket):
     finally:
         print("🔌 WebSocket connection closing")
         stream_manager.stop()
+
+def call_gemini_api(prompt, api_key):
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+    headers = {"Content-Type": "application/json"}
+    params = {"key": api_key}
+    data = {
+        "contents": [{"parts": [{"text": prompt}]}]
+    }
+    response = requests.post(url, headers=headers, params=params, json=data)
+    response.raise_for_status()
+    result = response.json()
+    # Extract the response text
+    try:
+        return result["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception:
+        return "Sorry, I couldn't get a response from Gemini."
 
 if __name__ == "__main__":
     import uvicorn
