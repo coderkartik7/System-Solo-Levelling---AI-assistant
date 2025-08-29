@@ -13,3 +13,4 @@ services:
         sync: false
       - key: SEARCH_API_KEY
         sync: false
+    rootDir: AI voice agents
