@@ -262,6 +262,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 data = json.loads(message["text"])
                 if data.get("type") == "start":
                     if data.get("apiKeys"):
+                        print("Received API Keys")
                         stream_manager.updateApiKeys(data["apiKeys"])
                     print("▶️ Starting transcription session")
                     await websocket.send_text(json.dumps({"type": "ready"}))
