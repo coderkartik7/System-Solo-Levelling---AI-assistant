@@ -9,7 +9,7 @@ requests==2.31.0
 python-dotenv==1.0.0
 
 # Audio transcription
-assemblyai==0.27.0
+assemblyai==2.8.0
 
 # Optional: For development and testing
 pytest==7.4.3
