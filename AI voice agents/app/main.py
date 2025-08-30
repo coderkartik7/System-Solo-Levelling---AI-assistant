@@ -19,9 +19,6 @@ from assemblyai.streaming.v3 import (
 )
 import re
 
-# Initialize services
-aai.settings.api_key = config.ASSEMBLY_API_KEY
-
 app = FastAPI()
 STATIC_DIR = Path(__file__).parent.parent / "static"
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates" / "index.html"
@@ -38,8 +35,6 @@ class StreamManager:
     
     def updateApiKeys(self, keys):
         self.api_keys = keys
-        if keys.get('assemblyai'):
-            aai.settings.api_key = keys['assemblyai']
 
         
     async def start_transcription(self, websocket):
@@ -48,7 +43,7 @@ class StreamManager:
         
         self.client = StreamingClient(
             StreamingClientOptions(
-                api_key=config.ASSEMBLY_API_KEY,
+                api_key=self.api_keys.get('assemblyai'),
                 api_host="streaming.assemblyai.com"
             )
         )
@@ -66,11 +61,11 @@ class StreamManager:
         """Search the web and return results"""
         try:
             # If no search API key is configured, use a mock response
-            if not hasattr(config, 'SEARCH_API_KEY') or not config.SEARCH_API_KEY:
+            if not self.api_keys.get("searchKey"):
                 return f"Mock search results for '{query}':\n• Example result 1\n• Example result 2\n• Example result 3"
                 
             # Example using SerpAPI (you can use any search API)
-            url = f"https://serpapi.com/search.json?q={quote(query)}&api_key={config.SEARCH_API_KEY}"
+            url = f"https://serpapi.com/search.json?q={quote(query)}&api_key={self.api_keys.get("search")}"
             response = requests.get(url)
             data = response.json()
         
@@ -162,7 +157,7 @@ class StreamManager:
                 If you were provided search results, incorporate them naturally into your response.
                 However you can answer the question that are not related to Solo leveling"""
 
-            llm_text = call_gemini_api(prompt, config.GEMINI_API_KEY)
+            llm_text = call_gemini_api(prompt, self.api_keys.get("gemini"))
 
             # Add assistant response to history
             self.chatHistory.append({"role":"System","content":llm_text})
@@ -184,7 +179,7 @@ class StreamManager:
         """Send text to Murf WebSocket for TTS and get base64 audio"""
         try:
             murf_ws_url = "wss://api.murf.ai/v1/speech/stream-input"
-            headers = {"api-key": f"{config.MURF_API_KEY}"}
+            headers = {"api-key": f"{self.api_keys.get("murf")}"}
         
             print(f"🔗 Connecting to Murf WebSocket...")
             async with websockets.connect(murf_ws_url, additional_headers=headers) as murf_ws:
