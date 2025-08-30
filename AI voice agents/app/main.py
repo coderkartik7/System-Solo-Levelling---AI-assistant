@@ -35,8 +35,10 @@ class StreamManager:
     
     def updateApiKeys(self, keys):
         self.api_keys = keys
+        print("API keys configured")
         if keys.get('assemblyai'):
             aai.settings.api_key = keys['assemblyai']
+            print("Assemblyai api configured")
 
         
     async def start_transcription(self, websocket):
