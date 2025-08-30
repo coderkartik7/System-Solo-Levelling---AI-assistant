@@ -334,33 +334,88 @@ AI voice agents/
 ✅ Controlling **tone, style, and character** in AI responses.  
 ✅ Understanding the role of **personas** in making AI interactions engaging + human-like.
 
-## 🛠️ Tech Stack
+---
+### **Day 25 – Agent Special Skill 1: Web Search 🌐🤖**  
+- Integrated **web search capability** into the agent.  
+- User queries can now be routed through the LLM → external web search.  
+- Responses are generated with **fresh, real-time knowledge**, not just static training data.  
 
-### **Backend**
-- **FastAPI (Python)** – Core backend framework
-- **WebSockets (FastAPI + WebSocket API)** – Real-time audio & text streaming
-- **uvicorn** – ASGI server for running FastAPI apps
+**Skills Learned:**  
+✅ Connecting LLM with external web search  
+✅ Enabling **real-time information retrieval**  
+✅ Expanding agent capabilities beyond training data  
 
-### **Frontend**
-- **HTML, CSS, JavaScript**
-- **WebSocket API (Browser)** – Sending/receiving streaming data
+---  
 
-### **AI & APIs**
-- **Murf API** – Text-to-Speech (REST + WebSocket)
-- **AssemblyAI API** – Speech-to-Text (file upload + streaming + turn detection)
-- **Google Gemini API** – Large Language Model (text + streaming responses)
+### **Day 26 – Agent Special Skill 2: Weather Updates ☀️🌧️**  
+- Leveraged the **Web Search integration** to provide real-time weather updates.  
+- Users can ask about **current conditions, temperature, or forecasts** in natural language.  
+- Demonstrated how the same web search skill can power **practical, everyday use cases** like weather.  
 
-### **Data Handling**
-- **In-memory datastore (Python dict)** – Session-based chat history
-- **Base64 encoding** – Audio transmission
-- **PCM Audio (16kHz, 16-bit, mono)** – Format required for STT streaming
-- **File uploads & storage** – Temporary audio storage for testing
+**Skills Learned:**  
+✅ Extending existing skills (Web Search) to handle new use cases  
+✅ Parsing + presenting **structured real-world data** (weather info)  
+✅ Building a more **helpful, context-aware assistant**  
 
-### **Other Tools**
-- **dotenv** – API key management via `.env`
-- **Postman** – API testing
-- **Git + GitHub** – Version control
-- **Branching strategy** – Separate `streaming` branch for WebSocket features
+---
 
+### **Day 27 – Revamp UI + Code Cleanup 🎨⚡**  
+- Added a **config section in the UI** to let users enter their own API keys.  
+- Revamped the UI for a **cleaner, modern look**.  
+- Performed **code cleanup + refactoring** for better maintainability.  
+- Left room for adding any final features.  
+
+**Skills Learned:**  
+✅ Improving **UI/UX** for better usability  
+✅ Configuring apps to accept **user-provided API keys**  
+✅ Refactoring + maintaining cleaner codebases  
+
+---  
+
+### **Day 28 – Deploying the Agent to the Cloud ☁️🚀**  
+- Deployed the voice agent to a **cloud hosting service** (free tier).  
+- Configured environment + dependencies for production.  
+- Made the agent accessible via a **public endpoint**.  
+- Ensured the deployment is **lightweight, scalable, and reliable**.  
+
+**Skills Learned:**  
+✅ Cloud deployment basics  
+✅ Making apps **publicly accessible**  
+✅ Managing hosting, dependencies, and free-tier resources safely  
+
+---
+### **Day 29 - Update Readme.md file**
+---
+
+## 🛠️ Tech Stack  
+
+### **Backend**  
+- **FastAPI (Python)** – Core backend framework  
+- **WebSockets (FastAPI + WebSocket API)** – Real-time audio & text streaming  
+- **uvicorn** – ASGI server for running FastAPI apps  
+
+### **Frontend**  
+- **HTML, CSS, JavaScript**  
+- **WebSocket API (Browser)** – Sending/receiving streaming data  
+- **Modernized UI** – Revamped interface with recording controls, session handling, and API key input  
+
+### **AI & APIs**  
+- **Murf API** – Text-to-Speech (REST + WebSocket)  
+- **AssemblyAI API** – Speech-to-Text (file upload + streaming + turn detection)  
+- **Google Gemini API** – Large Language Model (text + streaming responses)  
+- **Web Search Integration** – Fetches real-time knowledge from the internet, also used for **weather updates**  
+
+### **Data Handling**  
+- **In-memory datastore (Python dict)** – Session-based chat history  
+- **Base64 encoding** – Audio transmission  
+- **PCM Audio (16kHz, 16-bit, mono)** – Format required for STT streaming  
+- **File uploads & storage** – Temporary audio storage for testing  
+
+### **Other Tools & Deployment**  
+- **dotenv** – API key management via `.env` (plus user-provided API key config in UI)  
+- **Postman** – API testing  
+- **Git + GitHub** – Version control  
+- **Branching strategy** – Separate `streaming` branch for WebSocket features  
+- **Cloud Hosting (Render/Free-tier providers)** – Public deployment of the voice agent  
 
 ---
