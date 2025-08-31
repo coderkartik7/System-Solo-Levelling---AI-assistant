@@ -192,7 +192,7 @@ class StreamManager:
                     "context_id": f"turn_{int(asyncio.get_event_loop().time())}",
                     "text": text,
                     "voice_config": {
-                        "voice_id" : "en-US-Daniel",
+                        "voiceId" : "en-US-Daniel",
                         "style":"Inspirational"},
                     "format": "mp3",
                     "sample_rate": 24000
