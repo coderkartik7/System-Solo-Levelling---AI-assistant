@@ -1,6 +1,7 @@
 import requests
 from urllib.parse import quote
 import json
+import base64
 import asyncio
 import websockets
 import assemblyai as aai
@@ -180,10 +181,8 @@ class StreamManager:
         """Send text to Murf WebSocket for TTS and get base64 audio"""
         try:
             murf_ws_url = "wss://api.murf.ai/v1/speech/stream-input"
-            headers = {"api-key": f"{self.api_keys.get("murf")}"}
-        
             print(f"🔗 Connecting to Murf WebSocket...")
-            async with websockets.connect(murf_ws_url, additional_headers=headers) as murf_ws:
+            async with websockets.connect(f"{murf_ws_url}?api-key={self.api_keys.get("murf")}&sample_rate=44100&channel_type=MONO&format=WAV") as murf_ws:
             
                 request = {
                     "context_id": f"turn_{int(asyncio.get_event_loop().time())}",
@@ -192,7 +191,7 @@ class StreamManager:
                         "voiceId" : "en-US-Daniel",
                         "style":"Inspirational"},
                     "format": "mp3",
-                    "sample_rate": 41000
+                    "sample_rate": 24000
                 }
             
                 await murf_ws.send(json.dumps(request))
@@ -206,6 +205,11 @@ class StreamManager:
                     response = await murf_ws.recv()
                     audio_data = json.loads(response)
                     if "audio" in audio_data:
+                        print("Murf Audio:",audio_data["audio"][:30],"...")
+                        base64_audio = base64.b64decode(audio_data["audio"])
+                        if len(base64_audio)>44:
+                            base64_audio = f"{base64_audio[:30]} ..."
+                            print(f"Base64 audio{base64_audio}")
                         await self._send_to_websocket({"type" : "audio_chunk", "data" : audio_data["audio"]})
                     if audio_data.get("final"):
                         break
