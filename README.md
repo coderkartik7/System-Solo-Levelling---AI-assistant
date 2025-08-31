@@ -373,7 +373,7 @@ AI voice agents/
 ---  
 
 ### **Day 28 – Deploying the Agent to the Cloud ☁️🚀**  
-- Deployed the voice agent to a **cloud hosting service** (free tier).  
+- Deployed the voice agent to a **cloud hosting service** (render).  
 - Configured environment + dependencies for production.  
 - Made the agent accessible via a **public endpoint**.  
 - Ensured the deployment is **lightweight, scalable, and reliable**.  
