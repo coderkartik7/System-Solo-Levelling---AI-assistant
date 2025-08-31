@@ -183,75 +183,37 @@ class StreamManager:
         """Send text to Murf WebSocket for TTS and get base64 audio"""
         try:
             murf_ws_url = "wss://api.murf.ai/v1/speech/stream-input"
-            # Fix: Use extra_headers instead of additional_headers
-            headers = {"api-key": f"{self.api_keys.get('murf')}"}
-    
+            headers = {"api-key": f"{self.api_keys.get("murf")}"}
+        
             print(f"🔗 Connecting to Murf WebSocket...")
-            # Fixed: Use extra_headers parameter
-            async with websockets.connect(murf_ws_url, extra_headers=headers) as murf_ws:
-                print("✅ Connected to Murf WebSocket successfully")
+            async with websockets.connect(murf_ws_url, additional_headers=headers) as murf_ws:
             
-                # Send initial request with text and configuration
                 request = {
                     "context_id": f"turn_{int(asyncio.get_event_loop().time())}",
                     "text": text,
                     "voice_config": {
-                        "voiceId": "en-US-Daniel",
-                        "style": "Inspirational"
-                    },
+                        "voiceId" : "en-US-Daniel",
+                        "style":"Inspirational"},
                     "format": "mp3",
-                    "sample_rate": 41000
+                    "sample_rate": 24000
                 }
-        
-                await murf_ws.send(json.dumps(request))
-                print(f"🎵 Sent initial request to Murf: {text[:50]}...")
             
-                # Send end signal
+                await murf_ws.send(json.dumps(request))
+                print(f"🎵 Sent to Murf: {text[:50]}...")
                 text_msg = {
-                    "text": text,
-                    "end": True
+                    "text" : text,
+                    "end" :True
                 }
                 await murf_ws.send(json.dumps(text_msg))
-                print("📝 Sent end signal to Murf")
-            
-                # Listen for audio responses
-                audio_chunks_received = 0
                 while True:
-                    try:
-                        response = await murf_ws.recv()
-                        audio_data = json.loads(response)
-                    
-                        if "audio" in audio_data and audio_data["audio"]:
-                            audio_chunks_received += 1
-                            print(f"🎵 Received audio chunk #{audio_chunks_received}")
-                            await self._send_to_websocket({"type": "audio_chunk", "data": audio_data["audio"]})
-                    
-                        if audio_data.get("final"):
-                            print(f"✅ Audio generation complete. Total chunks: {audio_chunks_received}")
-                            break
-                        
-                    except websockets.exceptions.ConnectionClosed:
-                        print("🔌 Murf WebSocket connection closed")
+                    response = await murf_ws.recv()
+                    audio_data = json.loads(response)
+                    if "audio" in audio_data:
+                        await self._send_to_websocket({"type" : "audio_chunk", "data" : audio_data["audio"]})
+                    if audio_data.get("final"):
                         break
-                    
-        except websockets.exceptions.InvalidURI:
-            print(f"❌ Invalid Murf WebSocket URI: {murf_ws_url}")
-            await self._send_to_websocket({
-                "type": "error", 
-                "message": "Invalid Murf API endpoint"
-            })
-        except websockets.exceptions.InvalidHandshake as e:
-            print(f"❌ Murf WebSocket handshake failed: {e}")
-            await self._send_to_websocket({
-                "type": "error", 
-                "message": "Murf API authentication failed - check your API key"
-            })
         except Exception as e:
             print(f"❌ Murf WebSocket Error: {e}")
-            await self._send_to_websocket({
-                "type": "error", 
-                "message": f"Audio generation failed: {str(e)}"
-            })
     
     def on_termination(self, client, event: TerminationEvent):
         print(f"🛑 Session terminated after {event.audio_duration_seconds} s")
