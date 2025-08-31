@@ -184,9 +184,10 @@ class StreamManager:
         try:
             murf_ws_url = "wss://api.murf.ai/v1/speech/stream-input"
             headers = {"api-key": f"{self.api_keys.get("murf")}"}
+            url = f"{murf_ws_url}?api-key={self.api_keys.get("murf")}&sample_rate=44100&channel_type=MONO&format=WAV"
         
             print(f"🔗 Connecting to Murf WebSocket...")
-            async with websockets.connect(murf_ws_url, additional_headers=headers) as murf_ws:
+            async with websockets.connect(url) as murf_ws:
             
                 request = {
                     "context_id": f"turn_{int(asyncio.get_event_loop().time())}",
@@ -194,8 +195,7 @@ class StreamManager:
                     "voice_config": {
                         "voiceId" : "en-US-Daniel",
                         "style":"Inspirational"},
-                    "format": "mp3",
-                    "sample_rate": 24000
+                    "format": "mp3"
                 }
             
                 await murf_ws.send(json.dumps(request))
