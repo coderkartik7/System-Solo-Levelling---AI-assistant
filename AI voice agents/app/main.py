@@ -3,13 +3,10 @@ from urllib.parse import quote
 import json
 import asyncio
 import websockets
-import base64
 import assemblyai as aai
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from typing import Optional
-from app import config
 from pathlib import Path
 from assemblyai.streaming.v3 import (
     StreamingClient, StreamingClientOptions,
@@ -195,7 +192,7 @@ class StreamManager:
                         "voiceId" : "en-US-Daniel",
                         "style":"Inspirational"},
                     "format": "mp3",
-                    "sample_rate": 24000
+                    "sample_rate": 41000
                 }
             
                 await murf_ws.send(json.dumps(request))
@@ -294,5 +291,5 @@ def call_gemini_api(prompt, api_key):
 
 if __name__ == "__main__":
     import uvicorn
-    print(f"🚀 Starting server at http://{config.HOST}:{config.PORT}")
-    uvicorn.run("main:app", host=config.HOST, port=config.PORT, reload=True)
+    print(f"🚀 Starting server at http://{"0.0.0.0"}:{8000}")
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
