@@ -182,7 +182,7 @@ class StreamManager:
         try:
             murf_ws_url = "wss://api.murf.ai/v1/speech/stream-input"
             print(f"🔗 Connecting to Murf WebSocket...")
-            async with websockets.connect(f"{murf_ws_url}?api-key={self.api_keys.get("murf")}&sample_rate=44100&channel_type=MONO&format=WAV") as murf_ws:
+            async with websockets.connect(f"{murf_ws_url}?api-key={self.api_keys.get('murf')}&sample_rate=44100&channel_type=MONO&format=WAV") as murf_ws:
             
                 request = {
                     "context_id": f"turn_{int(asyncio.get_event_loop().time())}",
@@ -190,8 +190,8 @@ class StreamManager:
                     "voice_config": {
                         "voiceId" : "en-US-Daniel",
                         "style":"Inspirational"},
-                    "format": "mp3",
-                    "sample_rate": 24000
+                    "format": "wav",
+                    "sample_rate": 44100
                 }
             
                 await murf_ws.send(json.dumps(request))
@@ -248,7 +248,7 @@ async def get_index():
     with open(str(TEMPLATES_DIR), encoding="utf-8") as f:
         return HTMLResponse(f.read())
 
-@app.websocket("/ws")
+@app.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("🔗 WebSocket connection established")
@@ -296,4 +296,4 @@ def call_gemini_api(prompt, api_key):
 if __name__ == "__main__":
     import uvicorn
     print(f"🚀 Starting server at http://{"0.0.0.0"}:{8000}")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
